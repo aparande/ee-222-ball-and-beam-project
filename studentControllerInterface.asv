@@ -29,33 +29,29 @@ classdef studentControllerInterface < matlab.System
             % Extract reference trajectory at the current timestep.
             [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
             % Decide desired servo angle based on simple proportional feedback.
-            sz = 3;
+            sz = 1;
             stheta = 1;
             sigma = sz * p_ball + stheta * theta;
-            k = 2;
+            k = 10;
             if sigma < 0
-                V_servo = (abs(p_ball) + k + 1);
-            elseif sigma > 0
-                V_servo = -(abs(p_ball) + k + 1);
-            else
-                V_servo = 0;
-            end
+                V_servo = abs(p_ball) + k + 1
+            elseif sigma > 
 
             % Make sure that the desired servo angle does not exceed the physical
             % limit. This part of code is not necessary but highly recommended
             % because it addresses the actual physical limit of the servo motor.
-            %theta_saturation = 56 * pi / 180;    
-            %theta_d = min(theta_d, theta_saturation);
-            %theta_d = max(theta_d, -theta_saturation);
+            theta_saturation = 56 * pi / 180;    
+            theta_d = min(theta_d, theta_saturation);
+            theta_d = max(theta_d, -theta_saturation);
 
             % Simple position control to control servo angle to the desired
             % position.
-            %k_servo = 10;
-            %V_servo = k_servo * (theta_d - theta);
+            k_servo = 10;
+            V_servo = k_servo * (theta_d - theta);
             
             % Update class properties if necessary.
             obj.t_prev = t;
-            %obj.theta_d = theta_d;
+            obj.theta_d = theta_d;
         end
     end
     
