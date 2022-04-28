@@ -8,6 +8,7 @@ classdef studentControllerInterface < matlab.System
         theta_prev = 0;
         extra_dummy1 = 0;
         extra_dummy2 = 0;
+        derivatives = [0, 0, 0, 0, 0];
         K = cell2mat(struct2cell(load("lqr_gain.mat")));
     end
     methods(Access = protected)
@@ -73,9 +74,8 @@ classdef studentControllerInterface < matlab.System
     methods(Access = public)
         % Used this for matlab simulation script. fill free to modify it as
         % however you want.
-        function [V_servo, theta_d] = stepController(obj, t, p_ball, theta)        
+        function [V_servo] = stepController(obj, t, p_ball, theta)        
             V_servo = stepImpl(obj, t, p_ball, theta);
-            theta_d = 10;
         end
     end
     

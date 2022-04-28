@@ -6,7 +6,7 @@ clear all
 x0 = [-0.05; 0.00; 0; 0];
 t0 = 0;
 % Simulation time.
-T = 10;
+T = 90;
 % Sampling time of the controller
 dt = 0.01;
 % ode function to use.
@@ -23,10 +23,10 @@ controller_handle = studentControllerInterface();
 u_saturation = 10;
 
 % Initialize traces.
+p_obs = [];
 xs = x0;
 ts = t0;
 us = [];
-theta_ds = [];
 [p_ball_ref, v_ball_ref] = get_ref_traj(t0);
 ref_ps = p_ball_ref;
 ref_vs = v_ball_ref;
@@ -40,8 +40,11 @@ end_simulation = false;
 tstart = tic;
 while ~end_simulation
     %% Determine control input.
-    tstart = tic; % DEBUG    
-    [u, theta_d] = controller_handle.stepController(t, x(1), x(3));
+    tstart = tic; % DEBUG
+    stdev = 0.005;
+    noise = randn * (stdev)^2;
+    p_obs_cur = x(1) + noise;
+    [u] = controller_handle.stepController(t, p_obs_cur, x(3));
     u = min(u, u_saturation);
     u = max(u, -u_saturation);
     if verbose
@@ -49,7 +52,6 @@ while ~end_simulation
     end
     tend = toc(tstart);    
     us = [us, u];          
-    theta_ds = [theta_ds, theta_d];
     %% Run simulation for one time step.
     t_end_t = min(t + dt, t0+T);
     ode_opt = odeset('Events', @event_ball_out_of_range);
@@ -61,6 +63,7 @@ while ~end_simulation
     t = ts_t(end);
     x = xs_t(end, :)';
     %% Record traces.
+    p_obs =[p_obs, p_obs_cur];
     xs = [xs, x];
     ts = [ts, t];
     [p_ball_ref, v_ball_ref] = get_ref_traj(t);
@@ -68,11 +71,10 @@ while ~end_simulation
     ref_vs = [ref_vs, v_ball_ref];    
 end % end of the main while loop
 %% Add control input for the final timestep.
-[u, theta_d] = controller_handle.stepController(t, x(1), x(3));
+[u] = controller_handle.stepController(t, x(1), x(3));
 u = min(u, u_saturation);
 u = max(u, -u_saturation);
 us = [us, u];
-theta_ds = [theta_ds, theta_d];
 if verbose
     print_log(t, x, u);    
 end
@@ -84,7 +86,7 @@ score = get_controller_score(ts, ps, thetas, ref_ps, us);
 
 %% Plots
 % Plot states.
-plot_states(ts, xs, ref_ps, ref_vs, theta_ds);
+plot_states(ts, xs, ref_ps, ref_vs);
 % Plot output errors.
 plot_tracking_errors(ts, ps, ref_ps);        
 % Plot control input history.
