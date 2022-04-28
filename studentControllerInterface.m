@@ -29,14 +29,14 @@ classdef studentControllerInterface < matlab.System
             % Extract reference trajectory at the current timestep.
             [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
             % Decide desired servo angle based on simple proportional feedback.
-            sz = 3;
+            sz = 5;
             stheta = 1;
-            sigma = sz * p_ball + stheta * theta;
-            k = 2;
+            sigma = sz * (p_ball - p_ball_ref) + stheta * theta;
+            k = 4;
             if sigma < 0
-                V_servo = (abs(p_ball) + k + 1);
+                V_servo = (abs(p_ball - p_ball_ref) + abs(theta) + k + 1);
             elseif sigma > 0
-                V_servo = -(abs(p_ball) + k + 1);
+                V_servo = -(abs(p_ball - p_ball_ref) + abs(theta) + k + 1);
             else
                 V_servo = 0;
             end
