@@ -8,7 +8,7 @@ classdef studentControllerInterface < matlab.System
         theta_prev = 0;
         extra_dummy1 = 0;
         extra_dummy2 = 0;
-        K = [31.6227766016837	34.5054418067418	7.21308054318771	0.631362786986332];
+        K = cell2mat(struct2cell(load("lqr_gain.mat")));
     end
     methods(Access = protected)
         % function setupImpl(obj)
