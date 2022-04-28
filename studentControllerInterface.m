@@ -8,6 +8,7 @@ classdef studentControllerInterface < matlab.System
         theta_prev = 0;
         extra_dummy1 = 0;
         extra_dummy2 = 0;
+        K = [31.6227766016837	34.5054418067418	7.21308054318771	0.631362786986332];
     end
     methods(Access = protected)
         % function setupImpl(obj)
@@ -40,24 +41,16 @@ classdef studentControllerInterface < matlab.System
             z = [p_ball; p_ball_dot; theta; theta_dot];
 
             % Get linear dynamics
-            out = lin_dyn(0, 0, 0, 0);
-            A_lin = out(1:4, 1:4);
-            B_lin = out(1:4, 5);
+%             out = lin_dyn(0, 0, 0, 0);
+%             A_lin = out(1:4, 1:4);
+%             B_lin = out(1:4, 5);
             % f_affine = nonlin_dyn(p_ball, p_ball_dot, theta, theta_dot) - (A_lin * z);
             
-            % Get LQR terms
-            %A_lqr = [A_lin, f_affine; 0, 0, 0, 0, 0];
-            % B_lqr = [B_lin; 0];
-            %Q = diag([100, 1, 15, 1, 0]);
-            % R = 1;
-            Q = diag([10, 1, .15, .01]) * 100;
-            R = 1;
-            coder.extrinsic("lqr")
-            [K_sol, ~, ~] = lqr(A_lin, B_lin, Q, R);
-            K = zeros(1, 4);
-            K = K_sol;
+%             Q = diag([10, 1, .15, .01]) * 100;
+%             R = 1;
+%             [K, ~, ~] = lqr(A_lin, B_lin, Q, R);
             error = [p_ball - p_ball_ref; p_ball_dot - v_ball_ref; theta; theta_dot];
-            V_servo = - K * error;
+            V_servo = - obj.K * error;
 
             % Make sure that the desired servo angle does not exceed the physical
             % limit.
@@ -82,7 +75,7 @@ classdef studentControllerInterface < matlab.System
         % however you want.
         function [V_servo, theta_d] = stepController(obj, t, p_ball, theta)        
             V_servo = stepImpl(obj, t, p_ball, theta);
-            theta_d = 40
+            theta_d = 10;
         end
     end
     
