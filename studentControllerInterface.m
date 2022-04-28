@@ -50,15 +50,13 @@ classdef studentControllerInterface < matlab.System
             % B_lqr = [B_lin; 0];
             %Q = diag([100, 1, 15, 1, 0]);
             % R = 1;
-            Q = diag([100, 1, 15, 1]);
+            Q = diag([10, 1, .15, .01]) * 100;
             R = 1;
             coder.extrinsic("lqr")
             [K_sol, ~, ~] = lqr(A_lin, B_lin, Q, R);
             K = zeros(1, 4);
             K = K_sol;
             error = [p_ball - p_ball_ref; p_ball_dot - v_ball_ref; theta; theta_dot];
-            disp(theta)
-            disp(error)
             V_servo = - K * error;
 
             % Make sure that the desired servo angle does not exceed the physical
@@ -70,7 +68,7 @@ classdef studentControllerInterface < matlab.System
             % Make sure that the control input does not exceed the physical limit
             V_saturation = 10;    
             V_servo = min(V_servo, V_saturation);
-            V_servo = max(V_servo, V_saturation);
+            V_servo = max(V_servo, -V_saturation);
             
             % Update class properties if necessary.
             obj.t_prev = t;
@@ -84,7 +82,7 @@ classdef studentControllerInterface < matlab.System
         % however you want.
         function [V_servo, theta_d] = stepController(obj, t, p_ball, theta)        
             V_servo = stepImpl(obj, t, p_ball, theta);
-            theta_d = obj.theta_d;
+            theta_d = 40
         end
     end
     

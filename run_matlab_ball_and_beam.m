@@ -3,7 +3,7 @@ clear all
 
 %% General Settings.
 % Initial state.
-x0 = [-0.19; 0.00; 0; 0];
+x0 = [-0.05; 0.00; 0; 0];
 t0 = 0;
 % Simulation time.
 T = 10;
