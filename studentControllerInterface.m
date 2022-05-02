@@ -4,21 +4,27 @@ classdef studentControllerInterface < matlab.System
         % For more information of the supported data type, see
         % https://www.mathworks.com/help/simulink/ug/data-types-supported-by-simulink.html
         t_prev = -1;
-		theta_prev = 0;
-        pos_prev = 0;
-        vel_prev = 0;
+		theta_prev = -1;
+        pos_prev = -1;
+        vel_prev = -1;
         
         theta_d = 0;
         extra_dummy1 = 0;
         extra_dummy2 = 0;
         virtual_u = 0;
+        dtheta = 0;
 
 		% System Parameters
 		r_arm = 0.0254;
 		L = 0.4255;
 		g = 9.81;
-		K = 1.5;
+		K = 10;
 		tau = 0.025;
+
+        % Controller Parameters
+        k_p = 2;
+        k_v = 1;
+        k_u = 2;
     end
     methods(Access = protected)
         % function setupImpl(obj)
@@ -37,9 +43,6 @@ classdef studentControllerInterface < matlab.System
         % Output:
         %   V_servo: voltage to the servo input.        
             theta_saturation = 56 * pi / 180;
-            k_p = 2;
-            k_v = 1;
-            k_u = 2;
 
             a = 5 * obj.g * obj.r_arm / (7 * obj.L);
             b = (5 * obj.L / 14) * (obj.r_arm / obj.L)^2;
@@ -48,10 +51,19 @@ classdef studentControllerInterface < matlab.System
             % Extract reference trajectory at the current timestep.
             [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
 
-            vel = (p_ball - obj.pos_prev) / 0.01;
-            dtheta = (theta - obj.theta_prev) / 0.01;
+            % Account for IC in finite differencing
+            if obj.t_prev < 0
+                vel = 0;
+                dtheta = 0;
+            else
+                vel = (p_ball - obj.pos_prev) / (t - obj.t_prev);
+                dtheta = (theta - obj.theta_prev) / (t - obj.t_prev);
+                obj.dtheta = dtheta;
+            end
 
-		    u_d = 1 ./ (b - c .* p_ball) .* (a .* sin(theta) + k_v * (vel - v_ball_ref) + k_p .* (p_ball - p_ball_ref));
+            u_tilde = (dtheta .* cos(theta)) .^ 2;
+
+		    u_d = obj.optimal_virtual_u(p_ball, p_ball_ref, vel, v_ball_ref, theta);
             z = obj.tau / ( 2 * obj.K .* cos(theta) .^ 2);
 
             if dtheta < 1
@@ -59,10 +71,10 @@ classdef studentControllerInterface < matlab.System
             end
 
             z = z ./ dtheta;
-            
-            u_tilde = (dtheta .* cos(theta)) .^ 2;
 
-		    u =  z * (2 / obj.tau * u_tilde + dtheta .^ 3 .* sin(2 .* theta) - k_u .* (u_d - u_tilde));
+		    u =  z * (2 / obj.tau * u_tilde + (dtheta .^ 3) .* sin(2 .* theta) - obj.k_u .* (u_d - u_tilde));
+            %u = 1 ./ (2 .* obj.K) * dtheta + obj.tau * (dtheta .^ 2) * sin(2 .* theta) / (2 .* obj.K .* (cos(theta) .^ 2)) + z * (- obj.k_u .* (u_d - u_tilde));
+
             if abs(u) < 10
                 V_servo = u;
             else
@@ -75,15 +87,27 @@ classdef studentControllerInterface < matlab.System
 			obj.theta_prev = theta;
             obj.pos_prev = p_ball;
             obj.vel_prev = vel;
+            obj.virtual_u = u_d;
         end
     end
     
     methods(Access = public)
         % Used this for matlab simulation script. fill free to modify it as
         % however you want.
-        function [V_servo, theta_d] = stepController(obj, t, p_ball, theta)        
+        function [V_servo, theta_d, virtual_u, vel, dtheta] = stepController(obj, t, p_ball, theta)        
             V_servo = stepImpl(obj, t, p_ball, theta);
             theta_d = obj.theta_d;
+            virtual_u = obj.virtual_u;
+            vel = obj.vel_prev;
+            dtheta = obj.dtheta;
+        end
+
+        function virtual_u = optimal_virtual_u(obj, p_ball, p_ball_ref, v_ball, v_ball_ref, theta)
+            a = 5 * obj.g * obj.r_arm / (7 * obj.L);
+            b = (5 * obj.L / 14) * (obj.r_arm / obj.L)^2;
+            c = (5 / 7) * (obj.r_arm / obj.L)^2;
+
+            virtual_u = 1 ./ (b - c .* p_ball) .* (a .* sin(theta) + obj.k_v .* (v_ball - v_ball_ref) + obj.k_p .* (p_ball - p_ball_ref));
         end
     end
     
