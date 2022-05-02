@@ -18,7 +18,7 @@ plot_animation = false;
 % save animation to video if true.
 save_video = false;
 
-controller_handle = studentControllerInterface();
+controller_handle = approx2Controller();
 u_saturation = 10;
 
 % Initialize traces.

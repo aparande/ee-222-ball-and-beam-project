@@ -1,4 +1,4 @@
-classdef studentControllerInterface < matlab.System
+classdef approx2Controller < matlab.System
     properties (Access = private)
         %% You can add values that you want to store and updae while running your controller.
         % For more information of the supported data type, see
@@ -78,19 +78,19 @@ classdef studentControllerInterface < matlab.System
 %             e_v_ball = abs(v_ball_ref - v_ball);
 %             e_a_ball = abs(a_ball_ref - a_ball);
             
-            alpha = [1 3 5 7];
+            alpha = [4 6 4 1];
                 
-            alpha_0 = alpha(1);
-            alpha_1 = alpha(2);
-            alpha_2 = alpha(3);
-            alpha_3 = alpha(4);
+            alpha_0 = alpha(4);
+            alpha_1 = alpha(3);
+            alpha_2 = alpha(2);
+            alpha_3 = alpha(1);
             
             
             % Claire Exact Tracking
             u = 1/a * (-b + ddot_a_ball_ref + alpha_3*(dot_a_ball_ref - xi4) + alpha_2*(a_ball_ref - xi3) + alpha_1*(v_ball_ref - xi2) + alpha_0*(p_ball_ref - xi1));
             
             % V saturation
-            K_v = 0.2;
+            K_v = 0.155;
             V_sat = 10;
             V_servo = K_v*u;
             V_servo = max(V_servo, -V_sat);
