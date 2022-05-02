@@ -3,10 +3,10 @@ clear all
 
 %% General Settings.
 % Initial state.
-x0 = [-0.19; 0.00; 0; 0];
+x0 = [0.00; 0.00; 0; 0];
 t0 = 0;
 % Simulation time.
-T = 10;
+T = 90;
 % Sampling time of the controller
 dt = 0.01;
 % ode function to use.
@@ -14,7 +14,7 @@ ode_func = @ode45;
 % print log for each timestep if true.
 verbose = false;
 % plot animation if true.
-plot_animation = true;
+plot_animation = false;
 % save animation to video if true.
 save_video = false;
 
@@ -26,9 +26,13 @@ xs = x0;
 ts = t0;
 us = [];
 theta_ds = [];
-[p_ball_ref, v_ball_ref] = get_ref_traj(t0);
+[p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t0);
 ref_ps = p_ball_ref;
 ref_vs = v_ball_ref;
+ref_as = a_ball_ref;
+
+% (KAI) Approx. - Neglected nonlinearity term, psi
+psis = [];
 
 % Initialize state & time.
 x = x0;
@@ -40,7 +44,10 @@ tstart = tic;
 while ~end_simulation
     %% Determine control input.
     tstart = tic; % DEBUG    
-    [u, theta_d] = controller_handle.stepController(t, x(1), x(3));
+    % (KAI) Neglected nonlinearity - psi added
+    [u, theta_d, psi] = controller_handle.stepController(t, x(1), x(3));
+    psis = [psis, psi];
+    
     u = min(u, u_saturation);
     u = max(u, -u_saturation);
     if verbose
@@ -62,12 +69,16 @@ while ~end_simulation
     %% Record traces.
     xs = [xs, x];
     ts = [ts, t];
-    [p_ball_ref, v_ball_ref] = get_ref_traj(t);
+    [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
     ref_ps = [ref_ps, p_ball_ref];
     ref_vs = [ref_vs, v_ball_ref];    
+    ref_as = [ref_as, a_ball_ref];
 end % end of the main while loop
 %% Add control input for the final timestep.
-[u, theta_d] = controller_handle.stepController(t, x(1), x(3));
+% (KAI) Neglected nonlinearity - psi added
+[u, theta_d, psi] = controller_handle.stepController(t, x(1), x(3));
+psis = [psis, psi];
+
 u = min(u, u_saturation);
 u = max(u, -u_saturation);
 us = [us, u];
@@ -83,11 +94,14 @@ score = get_controller_score(ts, ps, thetas, ref_ps, us);
 
 %% Plots
 % Plot states.
-plot_states(ts, xs, ref_ps, ref_vs, theta_ds);
+plot_states(ts, xs, ref_ps, ref_vs, ref_as, theta_ds);
 % Plot output errors.
 plot_tracking_errors(ts, ps, ref_ps);        
 % Plot control input history.
 plot_controls(ts, us);
+
+% (KAI) Plot the neglected nonlinearity
+plot_neglected_nonlinearity(ts, psis);
 
 if plot_animation
     animate_ball_and_beam(ts, ps, thetas, ref_ps, save_video);

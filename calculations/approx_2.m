@@ -1,4 +1,5 @@
-clear; clc;
+clear; clc; close all;
+
 syms x1(t) x2(t) x3(t) x4(t) u(t) y(t) x1_dot(t) x2_dot(t) x3_dot(t) x4_dot(t) m g L r_g K tau
 
 x1_dot(t) = x2(t);
@@ -20,3 +21,16 @@ disp(Latex_3);
 Latex_4 = latex(xi_4_dot(t));
 display(xi_4_dot(t));
 disp(Latex_4);
+
+%% Characteristic equation pole placement
+clear;
+syms s
+
+char_eqn = (s+(10 + 0.1i))*(s+(10 + 0.1i))*(s+(10 + 0.1i));
+disp(newline + "Pole placement:");
+disp(expand(char_eqn));
+
+% Hurwitz Condition
+clear;
+char_eqn = [1 8 24 32 16];
+disp(roots(char_eqn));

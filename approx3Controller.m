@@ -6,12 +6,10 @@ classdef studentControllerInterface < matlab.System
         t_prev = -1;
         p_ball_prev = 0;
         v_ball_prev = 0;
-        a_ball_prev = 0;
         theta_prev = 0;
         v_theta_prev = 0;
         
         a_ball_ref_prev = 0;
-        dot_a_ball_ref_prev = 0;
         
         theta_d = 0;
     end
@@ -31,7 +29,7 @@ classdef studentControllerInterface < matlab.System
         %   theta: servo motor angle provided by the encoder of the motor (rad)
         % Output:
         %   V_servo: voltage to the servo input.                    
-            %% Approximate 2 - Feedback Linearization
+            %% Approximate 3 - Feedback Linearization
             % Model parameters
             r_g = 0.0254; % (m)
             L = 0.4255;   % (m)
@@ -42,60 +40,45 @@ classdef studentControllerInterface < matlab.System
             t_prev = obj.t_prev;
             p_ball_prev = obj.p_ball_prev;
             v_ball_prev = obj.v_ball_prev;
-            a_ball_prev = obj.a_ball_prev;
             theta_prev = obj.theta_prev;
             v_theta_prev = obj.v_theta_prev;
             
             dt = t - t_prev;
             % Calculate ball velocity (x2) and angular velocity (x4)
             v_ball = (p_ball - p_ball_prev) / dt;
-            a_ball = (v_ball - v_ball_prev) /dt;
             v_theta = (theta - theta_prev) / dt;
             % Extract reference trajectory at the current timestep.
                 % y_d, dot(y_d), ddot(y_d)
             [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
             a_ball_ref_prev = obj.a_ball_ref_prev;
-            dot_a_ball_ref_prev = obj.dot_a_ball_ref_prev;
                 % y_d^(3)
             dot_a_ball_ref = (a_ball_ref - a_ball_ref_prev) / dt;
-                % y_d^(4)
-            ddot_a_ball_ref = (dot_a_ball_ref - dot_a_ball_ref_prev) / dt;
-                
+            
             
             % Approximate normal form
             xi1 = p_ball;
             xi2 = theta;
-            xi3 = (5*g)/(7*L)*r_g*sin(theta);
-            xi4 = (5*g)/(7*L)*r_g*v_theta*cos(theta);
-            psi2 = 5/(7*L^2)*r_g^2*p_ball*v_theta^2*cos(theta)^2 - 5/(14*L)*r_g^2*v_theta^2*cos(theta)^2;
+            xi3 = (5*g)/(7*L)*r_g*sin(theta) - 5/(14*L)*r_g^2*v_theta^2*cos(theta)^2;
+            psi2 = 5/(7*L^2)*r_g^2*p_ball*v_theta^2*cos(theta)^2;
             
-            a = (5*g*K)/(7*L*tau)*r_g*cos(theta);
-            b = -(5*g)/(7*L*tau)*r_g*v_theta*cos(theta) - (5*g)/(7*L)*r_g*v_theta^2*sin(theta);
+            a = (5*r_g)/(7*L)*v_theta*cos(theta)*(g + r_g*v_theta^2*cos(theta)*sin(theta) + r_g/tau*v_theta*cos(theta));
+            b = -(5*K*r_g^2)/(7*tau*L)*v_theta*cos(theta)^2;
             
             % Controller design
-%             alpha = [];
-%             e_p_ball = abs(p_ball_ref - p_ball);
-%             e_v_ball = abs(v_ball_ref - v_ball);
-%             e_a_ball = abs(a_ball_ref - a_ball);
-            
-            alpha = [4 6 4 1];
-                
-            alpha_0 = alpha(4);
-            alpha_1 = alpha(3);
-            alpha_2 = alpha(2);
-            alpha_3 = alpha(1);
-            
-            
+            alpha_0 = 17;
+            alpha_1 = 19;
+            alpha_2 = 3;
             % Claire Exact Tracking
-            u = 1/a * (-b + ddot_a_ball_ref + alpha_3*(dot_a_ball_ref - xi4) + alpha_2*(a_ball_ref - xi3) + alpha_1*(v_ball_ref - xi2) + alpha_0*(p_ball_ref - xi1));
+            u = 1/a * (-b + dot_a_ball_ref + alpha_2*(a_ball_ref - xi3) + alpha_1*(v_ball_ref - xi2) + alpha_0*(p_ball_ref - xi1)); 
+%             u = 1/a * (-b + p_ball_ref/dt^3 + alpha_2*(p_ball_ref/dt^2 - xi3) + alpha_1*(p_ball_ref/dt - xi2) + alpha_0*(p_ball_ref - xi1)); 
             
             % V saturation
-            K_v = 0.155;
+            K_v = 0.4;
             V_sat = 10;
-            V_servo = K_v*u;
+            V_servo = u;
             V_servo = max(V_servo, -V_sat);
             V_servo = min(V_servo, V_sat);
-            V_servo = V_servo;
+            V_servo = K_v * V_servo;
             
             % Neglected nonlinearity psi
             psi = psi2;
@@ -104,12 +87,10 @@ classdef studentControllerInterface < matlab.System
             obj.t_prev = t;
             obj.p_ball_prev = p_ball;
             obj.v_ball_prev = v_ball;
-            obj.a_ball_prev = a_ball;
             obj.theta_prev = theta;
             obj.v_theta_prev = v_theta;
             
             obj.a_ball_ref_prev = a_ball_ref;
-            obj.dot_a_ball_ref_prev = dot_a_ball_ref;
         end
     end
     

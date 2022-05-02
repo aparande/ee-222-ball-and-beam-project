@@ -1,4 +1,4 @@
-function plot_states(ts, xs, ref_ps, ref_vs, theta_ds)
+function plot_states(ts, xs, ref_ps, ref_vs, ref_as, theta_ds)
 
 if nargin < 5
     theta_ds = []; 
@@ -12,7 +12,7 @@ set(fig, 'DefaultTextFontName', 'Times New Roman');
 % Set up interpreter
 set(fig, 'DefaultTextInterpreter', 'latex');
 
-subplot(4, 1, 1);
+subplot(5, 1, 1);
 plot(ts, 100 * xs(1, :), 'LineWidth', 1.5);
 hold on;
 plot(ts, 100 * ref_ps, '-.', 'LineWidth', 1.5);
@@ -21,14 +21,20 @@ grid on;
 title('State History');
 
 
-subplot(4, 1, 2);
+subplot(5, 1, 2);
 plot(ts, 100 * xs(2, :), 'LineWidth', 1.5);
 hold on;
 plot(ts, 100 * ref_vs, '-.', 'LineWidth', 1.5);
 grid on;
 ylabel('$\dot{z}$ [cm / s]', 'Interpreter', 'latex');
 
-subplot(4, 1, 3);
+subplot(5, 1, 3);
+plot(ts, 100 * ref_as, 'r-.', 'LineWidth', 1.5);
+grid on;
+ylabel('$\ddot{z}$ [cm / s]', 'Interpreter', 'latex');
+
+
+subplot(5, 1, 4);
 plot(ts, 180 * xs(3, :) / pi, 'LineWidth', 1.5);
 ylabel('$\theta$ [deg]', 'Interpreter', 'latex');
 if ~isempty(theta_ds)
@@ -37,7 +43,7 @@ if ~isempty(theta_ds)
     grid on;
 end
 
-subplot(4, 1, 4);
+subplot(5, 1, 5);
 plot(ts, 180 * xs(4, :) / pi, 'LineWidth', 1.5);
 ylabel('$\dot{\theta}$ [deg/s]', 'Interpreter', 'latex');
 xlabel('$t$ [sec]', 'Interpreter', 'latex');
