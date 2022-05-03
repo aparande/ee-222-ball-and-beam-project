@@ -76,24 +76,27 @@ classdef approx2Controller < matlab.System
             
             % Input Design
 %             alpha = [4 6 4 1];
-            alpha_0 = obj.K(4);
-            alpha_1 = obj.K(3);
-            alpha_2 = obj.K(2);
-            alpha_3 = obj.K(1);
+                
+            alpha_0 = K(4);
+            alpha_1 = alpha(3);
+            alpha_2 = alpha(2);
+            alpha_3 = alpha(1);
+            
             
             % Claire Exact Tracking
             u = 1/a * (-b + ddot_a_ball_ref + alpha_3*(dot_a_ball_ref - xi4) + alpha_2*(a_ball_ref - xi3) + alpha_1*(v_ball_ref - xi2) + alpha_0*(p_ball_ref - xi1));
             
             % V saturation
-            K_v = 0.6;
-            V_servo = K_v*u;
+            K_v = 0.155;
             V_sat = 10;
+            V_servo = K_v*u;
             V_servo = max(V_servo, -V_sat);
             V_servo = min(V_servo, V_sat);
             V_servo = V_servo;
             
             % Neglected nonlinearity psi
             psi = psi2;
+            
             % Update class properties.
             obj.t_prev = t;
             obj.p_ball_prev = p_ball;

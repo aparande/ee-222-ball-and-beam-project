@@ -72,7 +72,7 @@ classdef approx3Controller < matlab.System
             u = 1/a * (-b + dot_a_ball_ref + alpha_2*(a_ball_ref - xi3) + alpha_1*(v_ball_ref - xi2) + alpha_0*(p_ball_ref - xi1)); 
             
             % V saturation
-            K_v = 0.4;
+            K_v = 0.6;
             V_sat = 10;
             V_servo = u;
             V_servo = max(V_servo, -V_sat);
