@@ -34,7 +34,7 @@ classdef studentControllerInterface < matlab.System
             % Extract reference trajectory at the current timestep.
             [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
             
-            if(abs(p_ball) > 0.05)
+            if(abs(p_ball) > 0.03)
                 p_ball_ref = 0;
             end
 
