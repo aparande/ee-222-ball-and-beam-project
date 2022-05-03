@@ -7,6 +7,12 @@ classdef studentControllerInterface < matlab.System
         theta_d = 0;
         extra_dummy1 = 0;
         extra_dummy2 = 0;
+        g = 9.81;
+        r_arm = 0.0254;
+        L = 0.4255;
+        a = 5 * g * r_arm / (7 * L);
+        b = (5 * L / 14) * (r_arm / L)^2;
+        c = (5 / 7) * (r_arm / L)^2;
     end
     methods(Access = protected)
         % function setupImpl(obj)
@@ -56,6 +62,13 @@ classdef studentControllerInterface < matlab.System
         function [V_servo, theta_d] = stepController(obj, t, p_ball, theta)        
             V_servo = stepImpl(obj, t, p_ball, theta);
             theta_d = obj.theta_d;
+        end
+
+        function x4 = solvex4(obj, p_ball, theta, v)
+            fx = obj.a * sin(theta);
+            gx = - obj.b * cos(theta)^2 + obj.c * p_ball * cos(theta)^2;
+            x4_2 = (v - fx)/gx;
+            x4 = - sign(theta) * sqrt(x4_2);
         end
     end
     
