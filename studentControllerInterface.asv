@@ -5,7 +5,7 @@ classdef studentControllerInterface < matlab.System
         % https://www.mathworks.com/help/simulink/ug/data-types-supported-by-simulink.html
         t_prev = -1;
         theta_d = 0;
-        z_prev = 0;
+        z_prev
         extra_dummy1 = 0;
         extra_dummy2 = 0;
     end
@@ -27,17 +27,11 @@ classdef studentControllerInterface < matlab.System
         %   V_servo: voltage to the servo input.        
             %% Sample Controller: Simple Proportional Controller
             t_prev = obj.t_prev;
-            z_prev = obj.z_prev;
             % Extract reference trajectory at the current timestep.
             [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
             % Decide desired servo angle based on simple proportional feedback.
-            if(abs(p_ball) > 0.15)
-                p_ball_ref = 0;
-            end
-            dz = (p_ball - z_prev) / (t - t_prev);
             k_p = 3;
-            k_v = 3;
-            theta_d = - k_p * (p_ball - p_ball_ref) - k_v * (dz - v_ball_ref);
+            theta_d = - k_p * (p_ball - p_ball_ref);
 
             % Make sure that the desired servo angle does not exceed the physical
             % limit. This part of code is not necessary but highly recommended
@@ -53,7 +47,6 @@ classdef studentControllerInterface < matlab.System
             
             % Update class properties if necessary.
             obj.t_prev = t;
-            obj.z_prev = p_ball;
             obj.theta_d = theta_d;
         end
     end
