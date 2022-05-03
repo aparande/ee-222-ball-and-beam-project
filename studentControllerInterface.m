@@ -1,6 +1,6 @@
 classdef studentControllerInterface < matlab.System
     properties (Access = private)
-        %% You can add values that you want to store and updae while running your controller.
+        %% You can add values that you want to store and update while running your controller.
         % For more information of the supported data type, see
         % https://www.mathworks.com/help/simulink/ug/data-types-supported-by-simulink.html
         t_prev = -1;
@@ -8,7 +8,8 @@ classdef studentControllerInterface < matlab.System
         theta_prev = 0;
         extra_dummy1 = 0;
         extra_dummy2 = 0;
-        derivatives = [0, 0, 0, 0, 0];
+        derivatives = zeros(1, 5)
+        control_inputs = zeros(1, 3)
         K = cell2mat(struct2cell(load("lqr_gain.mat")));
     end
     methods(Access = protected)
@@ -28,17 +29,16 @@ classdef studentControllerInterface < matlab.System
         % Output:
         %   V_servo: voltage to the servo input.
             
-            t_prev = obj.t_prev;
-            dt = t - t_prev;
-            p_ball_prev = obj.p_ball_prev;
-            theta_prev = obj.theta_prev;
+            dt = t - obj.t_prev;
 
             % Extract reference trajectory at the current timestep.
             [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
 
             % Approximate state derivatives
-            p_ball_dot = (p_ball - p_ball_prev)/dt;
-            theta_dot = (theta - theta_prev)/dt;
+            p_ball_dot_cur = (p_ball - obj.p_ball_prev)/dt;
+            obj.derivatives = [obj.derivatives(2:end), p_ball_dot_cur];
+            p_ball_dot = mean(obj.derivatives);
+            theta_dot = (theta - obj.theta_prev)/dt;
             z = [p_ball; p_ball_dot; theta; theta_dot];
 
             % Get linear dynamics
@@ -50,9 +50,11 @@ classdef studentControllerInterface < matlab.System
 %             Q = diag([10, 1, .15, .01]) * 100;
 %             R = 1;
 %             [K, ~, ~] = lqr(A_lin, B_lin, Q, R);
+            
             error = [p_ball - p_ball_ref; p_ball_dot - v_ball_ref; theta; theta_dot];
-            V_servo = - obj.K * error;
-
+            V_servo_cur = - obj.K * error;
+            obj.control_inputs = [obj.control_inputs(2:end), V_servo_cur];
+            V_servo = mean(obj.control_inputs);
             % Make sure that the desired servo angle does not exceed the physical
             % limit.
             % theta_saturation = 56 * pi / 180;    
