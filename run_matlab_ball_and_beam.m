@@ -3,10 +3,10 @@ clear all
 
 %% General Settings.
 % Initial state.
-x0 = [5.0; 0.00; 0; 0];
+x0 = [0; 0.00; 0; 0];
 t0 = 0;
 % Simulation time.
-T = 10;
+T = 90;
 % Sampling time of the controller
 dt = 0.01;
 % ode function to use.
@@ -14,7 +14,7 @@ ode_func = @ode45;
 % print log for each timestep if true.
 verbose = false;
 % plot animation if true.
-plot_animation = true;
+plot_animation = false;
 % save animation to video if true.
 save_video = false;
 
@@ -37,10 +37,14 @@ end_simulation = false;
 %% Run simulation.
 % _t indicates variables for the current loop.
 tstart = tic;
+% Right now I am simulating error in observation and error in the dynamics
 while ~end_simulation
     %% Determine control input.
-    tstart = tic; % DEBUG    
-    [u, theta_d] = controller_handle.stepController(t, x(1), x(3));
+    tstart = tic; % DEBUG
+    stdev = 0.02;
+    noise = randn * (stdev)^2;
+    p_obs_cur = x(1) + noise;
+    [u, theta_d] = controller_handle.stepController(t, p_obs_cur, x(3));
     u = min(u, u_saturation);
     u = max(u, -u_saturation);
     if verbose
@@ -59,6 +63,7 @@ while ~end_simulation
     end_with_event = ~isempty(t_event); 
     t = ts_t(end);
     x = xs_t(end, :)';
+    x(1) = x(1);
     %% Record traces.
     xs = [xs, x];
     ts = [ts, t];
