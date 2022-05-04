@@ -40,8 +40,8 @@ classdef studentControllerInterface < matlab.System
 
             % Extract reference trajectory at the current timestep.
             [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
-            if abs(p_ball_cur) > .13
-                p_ball_ref = sign(p_ball_ref) * .1;
+            if abs(p_ball_cur) > .1
+                p_ball_ref = p_ball_ref/2;
                 v_ball_ref = 0;
             end
 
@@ -55,14 +55,18 @@ classdef studentControllerInterface < matlab.System
             end
             p_ball_dot = p_ball_dot_cur;
             theta_dot = (theta - obj.theta_prev)/dt;
-            z = [p_ball; p_ball_dot; theta; theta_dot];
+%             z = [p_ball; p_ball_dot; theta; theta_dot];
             
             % error = [p_ball - p_ball_ref; p_ball_dot - v_ball_ref; theta; theta_dot];
             p_ball_error = p_ball - p_ball_ref;
             p_ball_dot_error = p_ball_dot - v_ball_ref;
-            Kp = 5.0;
-            Kd = 3;
-            V_servo_cur = obj.solveu(p_ball, theta, theta_dot, -Kp * p_ball_error -Kd * p_ball_dot_error);
+            pid = [5.0, 3]; % working gains
+%             pid = [31.6228   16.2248];
+%             pid = [7.0711    4.9135];
+%             pid = [5.7735    4.2677];
+%             pid = [4.4721    3.5978];
+%             pid = [3.1623    2.8852];
+            V_servo_cur = obj.solveu(p_ball, theta, theta_dot, -pid(1) * p_ball_error -pid(2) * p_ball_dot_error);
             obj.control_inputs = [obj.control_inputs(2:end), V_servo_cur];
             V_servo = mean(obj.control_inputs);
             % Make sure that the desired servo angle does not exceed the physical
@@ -92,28 +96,20 @@ classdef studentControllerInterface < matlab.System
         end
 
         function V_servo = solveu(obj, p_ball, theta, theta_dot, v)
-            fx = obj.a * sin(theta);
-            gx = - obj.b * cos(theta)^2 + obj.c * p_ball * cos(theta)^2;
-            x4_2 = (v - fx)/gx;
-%            if x4_2 >= 0
-            if 1 == 0
-%                 disp("nay")
-                x4 = - sign(theta + 1e-3) * sqrt(x4_2);
-                k_servo = .01;
-                V_servo = k_servo * (x4 - theta_dot);
-                obj.theta_d = 0;
-           else
-%                 disp("hey")
                 sin_val = v/obj.a;
-                max_sin_val = .75;
+                max_sin_val = .70;
                 sin_val = min(sin_val, max_sin_val);
                 sin_val = max(sin_val, -max_sin_val);
                 obj.theta_d = asin(sin_val);
 %                 disp(theta_d)
 % %                 disp(obj.t_prev)
-                k_servo = 4;
-                V_servo = k_servo * (obj.theta_d - theta) - .2 * theta_dot;
-            end
+                pid = [4.0, 0.2]; % working gains
+%                 pid =  [4.4721    0.1739];
+%                 pid = [3.8730    0.1117];
+%                 pid = [3.8730    0.1092];
+%                 pid = [2.7386    0.0746];
+                V_servo = pid(1) * (obj.theta_d - theta) - pid(2) * theta_dot;
+
         end
     end
     

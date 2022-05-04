@@ -63,7 +63,7 @@ while ~end_simulation
     end_with_event = ~isempty(t_event); 
     t = ts_t(end);
     x = xs_t(end, :)';
-    x(1) = x(1);
+    x(1) = x(1) + noise;
     %% Record traces.
     xs = [xs, x];
     ts = [ts, t];
