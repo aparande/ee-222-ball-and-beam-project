@@ -17,15 +17,23 @@ classdef studentControllerInterface < matlab.System
         theta_prev = 0;
         extra_dummy1 = 0;
         extra_dummy2 = 0;
-        positions = zeros(1, 5);
-        control_inputs = zeros(1, 5);
+%         positions = zeros(1, 5);
+%         control_inputs = zeros(1, 7);
+%         theta_traj = zeros(1, 5);
+        ukf;
     end
     methods(Access = protected)
-        % function setupImpl(obj)
-        %    disp("You can use this function for initializaition.");
-        % end
+        function setupImpl(obj)
+%            disp("You can use this function for initializaition.");
+                obj.ukf = unscentedKalmanFilter(...
+                    @discrete_update,... % State transition function
+                    @measurement,... % Measurement function
+                    [0, 0, 0, 0],... % Initial state
+                    'MeasurementNoise', diag([.02^2, .05^2]), ...
+                    'ProcessNoise', diag([.001^2, .01^2, .001^2, 2^2]));
+        end
 
-        function V_servo = stepImpl(obj, t, p_ball_cur, theta)
+        function V_servo = stepImpl(obj, t, p_ball_obs, theta_obs)
         % This is the main function called every iteration. You have to implement
         % the controller in this function, bu you are not allowed to
         % change the signature of this function. 
@@ -37,24 +45,40 @@ classdef studentControllerInterface < matlab.System
         % Output:
         %   V_servo: voltage to the servo input.        
             dt = t - obj.t_prev;
-
+            correct(obj.ukf, [p_ball_obs, theta_obs]);
             % Extract reference trajectory at the current timestep.
             [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
-            if abs(p_ball_cur) > .1
-                p_ball_ref = p_ball_ref/2;
-                v_ball_ref = 0;
-            end
 
-            obj.positions = [obj.positions(2:end), p_ball_cur];
-            p_ball = mean(obj.positions);
+%             obj.positions = [obj.positions(2:end), p_ball_cur];
+%             p_ball = mean(obj.positions);
+%             if abs(p_ball_cur) > .1
+%                 p_ball_ref = 0;
+%             end
+
+%             FILTERING
+%             ---------
+            p_ball = obj.ukf.State(1);
+            p_ball_dot = obj.ukf.State(2);
+            theta = obj.ukf.State(3);
+            theta_dot = obj.ukf.State(4);
+
+%               NO FILTERING
+%               ------------
+%               p_ball = p_ball_obs;
+%               p_ball_dot = (p_ball - obj.p_ball_prev)/dt;
+%               theta = theta_obs;
+%               theta_dot = (theta - obj.theta_prev)/dt;
 
             % Approximate state derivatives
-            p_ball_dot_cur = (p_ball - obj.p_ball_prev)/dt;
-            if t < .1
-                p_ball_dot_cur = 0;
-            end
-            p_ball_dot = p_ball_dot_cur;
-            theta_dot = (theta - obj.theta_prev)/dt;
+%             p_ball_dot = (p_ball - obj.p_ball_prev)/dt;
+%             if t < .1
+%                 p_ball_dot_cur = 0;
+%             end
+%             if abs(p_ball_dot) > .1
+%                 v_ball_ref = 0;
+%             end
+%             
+%             theta_dot = (theta - obj.theta_prev)/dt;
 %             z = [p_ball; p_ball_dot; theta; theta_dot];
             
             % error = [p_ball - p_ball_ref; p_ball_dot - v_ball_ref; theta; theta_dot];
@@ -66,14 +90,11 @@ classdef studentControllerInterface < matlab.System
 %             pid = [5.7735    4.2677];
 %             pid = [4.4721    3.5978];
 %             pid = [3.1623    2.8852];
-            V_servo_cur = obj.solveu(p_ball, theta, theta_dot, -pid(1) * p_ball_error -pid(2) * p_ball_dot_error);
-            obj.control_inputs = [obj.control_inputs(2:end), V_servo_cur];
-            V_servo = mean(obj.control_inputs);
-            % Make sure that the desired servo angle does not exceed the physical
-            % limit.
-            % theta_saturation = 56 * pi / 180;    
-            % theta = min(theta_d, theta_saturation);
-            % theta = max(theta_d, -theta_saturation);
+            des_acc = -pid(1) * p_ball_error -pid(2) * p_ball_dot_error;
+            V_servo_cur = obj.solveu(theta, theta_dot, des_acc);
+%             obj.control_inputs = [obj.control_inputs(2:end), V_servo_cur];
+%             V_servo = mean(obj.control_inputs);
+            V_servo = V_servo_cur;
 
             % Make sure that the control input does not exceed the physical limit
             V_saturation = 10;    
@@ -84,30 +105,26 @@ classdef studentControllerInterface < matlab.System
             obj.t_prev = t;
             obj.p_ball_prev = p_ball;
             obj.theta_prev = theta;
+            predict(obj.ukf, V_servo);
         end
     end
     
     methods(Access = public)
         % Used this for matlab simulation script. fill free to modify it as
         % however you want.
-        function [V_servo, theta_d] = stepController(obj, t, p_ball, theta)        
+        function [V_servo, theta_d, ukf_state] = stepController(obj, t, p_ball, theta)        
             V_servo = stepImpl(obj, t, p_ball, theta);
             theta_d = obj.theta_d;
+            ukf_state = obj.ukf.State;
         end
 
-        function V_servo = solveu(obj, p_ball, theta, theta_dot, v)
+        function V_servo = solveu(obj, theta, theta_dot, v)
                 sin_val = v/obj.a;
                 max_sin_val = .70;
                 sin_val = min(sin_val, max_sin_val);
                 sin_val = max(sin_val, -max_sin_val);
                 obj.theta_d = asin(sin_val);
-%                 disp(theta_d)
-% %                 disp(obj.t_prev)
-                pid = [4.0, 0.2]; % working gains
-%                 pid =  [4.4721    0.1739];
-%                 pid = [3.8730    0.1117];
-%                 pid = [3.8730    0.1092];
-%                 pid = [2.7386    0.0746];
+                pid = [4.0, .2]; % working gains
                 V_servo = pid(1) * (obj.theta_d - theta) - pid(2) * theta_dot;
 
         end

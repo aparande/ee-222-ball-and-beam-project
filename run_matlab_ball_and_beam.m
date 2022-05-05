@@ -19,10 +19,13 @@ plot_animation = false;
 save_video = false;
 
 controller_handle = studentControllerInterface();
+setup(controller_handle)
 u_saturation = 10;
 
 % Initialize traces.
 xs = x0;
+pobs = x0(1);
+xest = x0;
 ts = t0;
 us = [];
 theta_ds = [];
@@ -41,10 +44,11 @@ tstart = tic;
 while ~end_simulation
     %% Determine control input.
     tstart = tic; % DEBUG
-    stdev = 0.02;
-    noise = randn * (stdev)^2;
+%     stdev = 0.015;
+    stdev = 0;
+    noise = randn * stdev;
     p_obs_cur = x(1) + noise;
-    [u, theta_d] = controller_handle.stepController(t, p_obs_cur, x(3));
+    [u, theta_d, ukf_state] = controller_handle.stepController(t, p_obs_cur, x(3));
     u = min(u, u_saturation);
     u = max(u, -u_saturation);
     if verbose
@@ -63,8 +67,13 @@ while ~end_simulation
     end_with_event = ~isempty(t_event); 
     t = ts_t(end);
     x = xs_t(end, :)';
+%     stdev = .001;
+    stdev = 0;
+    noise = randn * stdev;
     x(1) = x(1) + noise;
     %% Record traces.
+    pobs = [pobs, p_obs_cur];
+    xest = [xest, ukf_state'];
     xs = [xs, x];
     ts = [ts, t];
     [p_ball_ref, v_ball_ref] = get_ref_traj(t);
@@ -88,7 +97,7 @@ score = get_controller_score(ts, ps, thetas, ref_ps, us);
 
 %% Plots
 % Plot states.
-plot_states(ts, xs, ref_ps, ref_vs, theta_ds);
+plot_states(ts, xs, ref_ps, ref_vs, theta_ds, pobs, xest);
 % Plot output errors.
 plot_tracking_errors(ts, ps, ref_ps);        
 % Plot control input history.
