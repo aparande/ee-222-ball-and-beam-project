@@ -7,11 +7,11 @@ classdef studentControllerInterface < matlab.System
         b = (5 * studentControllerInterface.L / 14) * (studentControllerInterface.r_arm / studentControllerInterface.L)^2;
         c = (5 / 7) * (studentControllerInterface.r_arm / studentControllerInterface.L)^2;
 
-        k_p = 5.0;
-        k_v = 3.0;
-        k_theta = 4.0;
-        k_omega = .20;
-        safety_angle_deg = 40.1070; 
+        k_p = 2.0;
+        k_v = 5.0;
+        k_theta = 8.5703;
+        k_omega = 1.0806;
+        safety_angle_deg = 50.1070; 
    end
     properties (Access = private)
         %% You can add values that you want to store and updae while running your controller.
