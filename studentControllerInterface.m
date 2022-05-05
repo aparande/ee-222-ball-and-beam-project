@@ -6,6 +6,12 @@ classdef studentControllerInterface < matlab.System
         a = 5 * studentControllerInterface.g * studentControllerInterface.r_arm / (7 * studentControllerInterface.L);
         b = (5 * studentControllerInterface.L / 14) * (studentControllerInterface.r_arm / studentControllerInterface.L)^2;
         c = (5 / 7) * (studentControllerInterface.r_arm / studentControllerInterface.L)^2;
+
+        k_p = 5.0;
+        k_v = 3.0;
+        k_theta = 4.0;
+        k_omega = .20;
+        safety_angle_deg = 40.1070; 
    end
     properties (Access = private)
         %% You can add values that you want to store and updae while running your controller.
@@ -17,9 +23,7 @@ classdef studentControllerInterface < matlab.System
         theta_prev = 0;
         extra_dummy1 = 0;
         extra_dummy2 = 0;
-%         positions = zeros(1, 5);
-%         control_inputs = zeros(1, 7);
-%         theta_traj = zeros(1, 5);
+
         ukf;
     end
     methods(Access = protected)
@@ -46,14 +50,9 @@ classdef studentControllerInterface < matlab.System
         %   V_servo: voltage to the servo input.        
             dt = t - obj.t_prev;
             correct(obj.ukf, [p_ball_obs, theta_obs]);
+
             % Extract reference trajectory at the current timestep.
             [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
-
-%             obj.positions = [obj.positions(2:end), p_ball_cur];
-%             p_ball = mean(obj.positions);
-%             if abs(p_ball_cur) > .1
-%                 p_ball_ref = 0;
-%             end
 
 %             FILTERING
 %             ---------
@@ -61,39 +60,13 @@ classdef studentControllerInterface < matlab.System
             p_ball_dot = obj.ukf.State(2);
             theta = obj.ukf.State(3);
             theta_dot = obj.ukf.State(4);
-
-%               NO FILTERING
-%               ------------
-%               p_ball = p_ball_obs;
-%               p_ball_dot = (p_ball - obj.p_ball_prev)/dt;
-%               theta = theta_obs;
-%               theta_dot = (theta - obj.theta_prev)/dt;
-
-            % Approximate state derivatives
-%             p_ball_dot = (p_ball - obj.p_ball_prev)/dt;
-%             if t < .1
-%                 p_ball_dot_cur = 0;
-%             end
-%             if abs(p_ball_dot) > .1
-%                 v_ball_ref = 0;
-%             end
-%             
-%             theta_dot = (theta - obj.theta_prev)/dt;
-%             z = [p_ball; p_ball_dot; theta; theta_dot];
             
-            % error = [p_ball - p_ball_ref; p_ball_dot - v_ball_ref; theta; theta_dot];
             p_ball_error = p_ball - p_ball_ref;
             p_ball_dot_error = p_ball_dot - v_ball_ref;
-            pid = [5.0, 3]; % working gains
-%             pid = [31.6228   16.2248];
-%             pid = [7.0711    4.9135];
-%             pid = [5.7735    4.2677];
-%             pid = [4.4721    3.5978];
-%             pid = [3.1623    2.8852];
-            des_acc = -pid(1) * p_ball_error -pid(2) * p_ball_dot_error;
+
+            % Position Control
+            des_acc = -obj.k_p * p_ball_error - obj.k_v * p_ball_dot_error;
             V_servo_cur = obj.solveu(theta, theta_dot, des_acc);
-%             obj.control_inputs = [obj.control_inputs(2:end), V_servo_cur];
-%             V_servo = mean(obj.control_inputs);
             V_servo = V_servo_cur;
 
             % Make sure that the control input does not exceed the physical limit
@@ -119,13 +92,13 @@ classdef studentControllerInterface < matlab.System
         end
 
         function V_servo = solveu(obj, theta, theta_dot, v)
-                sin_val = v/obj.a;
-                max_sin_val = .70;
-                sin_val = min(sin_val, max_sin_val);
-                sin_val = max(sin_val, -max_sin_val);
-                obj.theta_d = asin(sin_val);
-                pid = [4.0, .2]; % working gains
-                V_servo = pid(1) * (obj.theta_d - theta) - pid(2) * theta_dot;
+            max_sin_val = obj.safety_angle_deg * pi / 180;
+
+            sin_val = v/obj.a;
+            sin_val = min(sin_val, max_sin_val);
+            sin_val = max(sin_val, -max_sin_val);
+            obj.theta_d = asin(sin_val);
+            V_servo = obj.k_theta * (obj.theta_d - theta) - obj.k_omega * theta_dot;
 
         end
     end
