@@ -25,28 +25,11 @@ classdef studentControllerInterface < matlab.System
         % Output:
         %   V_servo: voltage to the servo input.        
             %% Sample Controller: Simple Proportional Controller
-            t_prev = obj.t_prev;
-            % Extract reference trajectory at the current timestep.
-            [p_ball_ref, v_ball_ref, a_ball_ref] = get_ref_traj(t);
-            % Decide desired servo angle based on simple proportional feedback.
-            k_p = 3;
-            theta_d = - k_p * (p_ball - p_ball_ref);
-
-            % Make sure that the desired servo angle does not exceed the physical
-            % limit. This part of code is not necessary but highly recommended
-            % because it addresses the actual physical limit of the servo motor.
-            theta_saturation = 56 * pi / 180;    
-            theta_d = min(theta_d, theta_saturation);
-            theta_d = max(theta_d, -theta_saturation);
-
-            % Simple position control to control servo angle to the desired
-            % position.
-            k_servo = 10;
-            V_servo = k_servo * (theta_d - theta);
+            V_servo =  0.001;
             
             % Update class properties if necessary.
             obj.t_prev = t;
-            obj.theta_d = theta_d;
+            obj.theta_d = 0;
         end
     end
     
