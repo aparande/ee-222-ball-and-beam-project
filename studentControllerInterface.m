@@ -37,7 +37,7 @@ classdef studentControllerInterface < matlab.System
                     'ProcessNoise', diag([.001^2, .01^2, .001^2, 2^2]));
         end
 
-        function V_servo = stepImpl(obj, t, p_ball_obs, theta_obs)
+        function [V_servo, ukf_state] = stepImpl(obj, t, p_ball_obs, theta_obs)
         % This is the main function called every iteration. You have to implement
         % the controller in this function, bu you are not allowed to
         % change the signature of this function. 
@@ -64,6 +64,12 @@ classdef studentControllerInterface < matlab.System
             p_ball_error = p_ball - p_ball_ref;
             p_ball_dot_error = p_ball_dot - v_ball_ref;
 
+            % SAFETY
+            % ------
+            if abs(p_ball_ref) > 0.1
+                p_ball_ref = p_ball_ref / 2;
+            end
+
             % Position Control
             des_acc = -obj.k_p * p_ball_error - obj.k_v * p_ball_dot_error;
             V_servo_cur = obj.solveu(theta, theta_dot, des_acc);
@@ -73,6 +79,8 @@ classdef studentControllerInterface < matlab.System
             V_saturation = 10;    
             V_servo = min(V_servo, V_saturation);
             V_servo = max(V_servo, -V_saturation);
+
+            ukf_state = obj.ukf.State;
             
             % Update class properties if necessary.
             obj.t_prev = t;
@@ -92,7 +100,7 @@ classdef studentControllerInterface < matlab.System
         end
 
         function V_servo = solveu(obj, theta, theta_dot, v)
-            max_sin_val = obj.safety_angle_deg * pi / 180;
+            max_sin_val = sin(obj.safety_angle_deg * pi / 180);
 
             sin_val = v/obj.a;
             sin_val = min(sin_val, max_sin_val);
