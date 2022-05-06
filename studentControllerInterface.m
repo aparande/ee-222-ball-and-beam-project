@@ -33,7 +33,7 @@ classdef studentControllerInterface < matlab.System
                     @discrete_update,... % State transition function
                     @measurement,... % Measurement function
                     [0, 0, 0, 0],... % Initial state
-                    'MeasurementNoise', diag([.02^2, .05^2]), ...
+                    'MeasurementNoise', diag([.05^2, .05^2]), ...
                     'ProcessNoise', diag([.001^2, .01^2, .001^2, 2^2]));
         end
 
@@ -78,7 +78,7 @@ classdef studentControllerInterface < matlab.System
             obj.t_prev = t;
             obj.p_ball_prev = p_ball;
             obj.theta_prev = theta;
-            predict(obj.ukf, V_servo);
+            predict(obj.ukf, V_servo, dt);
         end
     end
     
