@@ -3,13 +3,14 @@ classdef studentControllerInterface < matlab.System
         g = 9.81;
         r_arm = 0.0254;
         L = 0.4255;
-        a = 5 * studentControllerInterface.g * studentControllerInterface.r_arm / (7 * studentControllerInterface.L);
+        a = 0.75 * 5 * studentControllerInterface.g * studentControllerInterface.r_arm / (7 * studentControllerInterface.L);
         b = (5 * studentControllerInterface.L / 14) * (studentControllerInterface.r_arm / studentControllerInterface.L)^2;
         c = (5 / 7) * (studentControllerInterface.r_arm / studentControllerInterface.L)^2;
 
-        k_p = 2.0;
-        k_v = 5.0;
-        k_theta = 8.5703;
+        k_p = [2.0 3.5 3.5 0.7];
+        k_v = [4.5 2.5 7.0 7.5];
+        
+        k_theta = 6.0;
         k_omega = 1.0806;
         safety_angle_deg = 50.1070; 
    end
@@ -32,9 +33,9 @@ classdef studentControllerInterface < matlab.System
                 obj.ukf = unscentedKalmanFilter(...
                     @discrete_update,... % State transition function
                     @measurement,... % Measurement function
-                    [0, 0, 0, 0],... % Initial state
+                    [0, 0, -56 * pi/180, 0],... % Initial state
                     'MeasurementNoise', diag([.05^2, .05^2]), ...
-                    'ProcessNoise', diag([.001^2, .01^2, .001^2, 2^2]));
+                    'ProcessNoise', diag([.001^2, .05^2, .001^2, 2^2]));
         end
 
         function [V_servo, ukf_state] = stepImpl(obj, t, p_ball_obs, theta_obs)
@@ -66,12 +67,26 @@ classdef studentControllerInterface < matlab.System
 
             % SAFETY
             % ------
-            if abs(p_ball_ref) > 0.1
-                p_ball_ref = p_ball_ref / 2;
-            end
-
+%             if (p_ball_ref < - 0.08) || (p_ball_ref > 0.1)
+%                 p_ball_ref = p_ball_ref / 2;
+%             end 
+            
             % Position Control
-            des_acc = -obj.k_p * p_ball_error - obj.k_v * p_ball_dot_error;
+            if (p_ball_ref > 0.07) && (v_ball_ref ~= 0)
+                k_p = obj.k_p(1);
+                k_v = obj.k_v(1);
+            elseif (p_ball_ref > 0)
+                k_p = obj.k_p(2);
+                k_v = obj.k_v(2);
+            elseif (p_ball_ref >= -0.07) || (v_ball_ref == 0)
+                k_p = obj.k_p(3);
+                k_v = obj.k_v(3);
+            else
+                k_p = obj.k_p(4);
+                k_v = obj.k_v(4);
+            end
+            
+            des_acc = -k_p * p_ball_error - k_v * p_ball_dot_error;
             V_servo_cur = obj.solveu(theta, theta_dot, des_acc);
             V_servo = V_servo_cur;
 
@@ -87,6 +102,9 @@ classdef studentControllerInterface < matlab.System
             obj.p_ball_prev = p_ball;
             obj.theta_prev = theta;
             predict(obj.ukf, V_servo, dt);
+            
+            disp(obj.ukf.MeasurementNoise)
+            disp(obj.ukf.ProcessNoise)
         end
     end
     
